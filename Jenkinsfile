@@ -1,57 +1,59 @@
 pipeline {
     agent any
-
+    
     environment {
-        GIT_CREDENTIALS = credentials('github-token')
+        DOCKER_HUB_CREDENTIALS = credentials('docker-hub-credentials')
     }
-
+    
     stages {
-        stage('Checkout Code') {
+        // Этап 1: Сборка фронтенда
+        stage('Build Frontend') {
             steps {
-                checkout([
-                    $class: 'GitSCM',
-                    branches: [[name: '*/main']],
-                    extensions: [],
-                    userRemoteConfigs: [[
-                        url: 'https://github.com/LonelyLake/tea-shop.git',
-                        credentialsId: 'github-token'
-                    ]]
-                ])
+                script {
+                    echo '=== СБОРКА FRONTEND ==='
+                    dir('frontend') {
+                        sh 'npm install'
+                        sh 'npm run build'
+                    }
+                }
             }
         }
-
-        stage('Prepare Environment') {
+        
+        // Этап 2: Сборка и запуск бекенда
+        stage('Deploy Backend') {
             steps {
-                sh '''
-                    # Удаляем устаревший version из docker-compose.yml
-                    if [ -f docker-compose.yml ]; then
-                        sed -i '/^version:/d' docker-compose.yml
-                    fi
-                '''
+                script {
+                    echo '=== ЗАПУСК БЕКЕНДА ==='
+                    dir('backend') {
+                        sh 'docker build -t tea-backend .'
+                    }
+                    sh 'docker-compose down || true'
+                    sh 'docker-compose up -d'
+                }
             }
         }
-
-        stage('Build and Deploy') {
+        
+        // Этап 3: Проверка работоспособности
+        stage('Health Check') {
             steps {
-                sh '''
-                    # Используем современный docker compose (без дефиса)
-                    docker compose down || true
-                    docker compose build
-                    docker compose up -d
-
-                '''
+                script {
+                    echo '=== ПРОВЕРКА СЕРВИСОВ ==='
+                    sh 'curl -I http://localhost:8000/api/teas || true'
+                }
             }
         }
     }
-
+    
     post {
-        failure {
-            echo 'Pipeline failed!'
-            // Можно добавить уведомления
+        always {
+            echo '=== ОЧИСТКА РЕСУРСОВ ==='
+            sh 'docker system prune -f'
         }
         success {
-            echo 'Pipeline succeeded!'
-            // Можно добавить уведомления
+            echo 'Деплой успешно завершен!'
+        }
+        failure {
+            echo 'Ошибка при деплое!'
         }
     }
 }
