@@ -8,7 +8,7 @@ pipeline {
     stages {
         stage('Clone repo') {
             steps {
-                git branch: 'main', url: 'https://github.com/LonelyLake/tea-shop', credentialsId: 'github-token'
+                git branch: 'main', url: 'https://github.com/LonelyLake/tea-shop.git', credentialsId: 'github-token'
             }
         }
 
@@ -17,10 +17,13 @@ pipeline {
                 script {
                     // Удаляем устаревший атрибут version из docker-compose.yml
                     sh '''
+                        # Убираем 'version:' только если это необходимо
                         sed -i '/^version:/d' docker-compose.yml
-                        docker compose down || true
-                        docker compose build
-                        docker compose up -d
+
+                        # Запускаем команды docker-compose
+                        docker-compose down || true
+                        docker-compose build
+                        docker-compose up -d
                     '''
                 }
             }
@@ -28,7 +31,12 @@ pipeline {
 
         stage('Build Backend') {
             steps {
-                sh 'cd backend && docker build -t tea-backend .'
+                script {
+                    // Переходим в папку backend и строим Docker образ
+                    dir('backend') {
+                        sh 'docker build -t tea-backend .'
+                    }
+                }
             }
         }
     }
