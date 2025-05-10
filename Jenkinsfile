@@ -47,7 +47,7 @@ pipeline {
             steps {
                 dir('/app') {
                     sh 'npm install'
-                    sh 'npm run build'  # если нужно собрать проект
+                    sh 'npm run build'
                 }
             }
         }       
