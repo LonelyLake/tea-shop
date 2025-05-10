@@ -16,7 +16,17 @@ pipeline {
             }
         }
 
-        // Этап 1: Сборка фронтенда
+        // Этап 1: Клонирование репозитория (если еще не клонирован)
+        stage('Checkout SCM') {
+            steps {
+                script {
+                    echo '=== Клонирование репозитория ==='
+                    checkout scm
+                }
+            }
+        }
+
+        // Этап 2: Сборка фронтенда
         stage('Build Frontend') {
             steps {
                 script {
@@ -29,7 +39,7 @@ pipeline {
             }
         }
         
-        // Этап 2: Сборка и запуск бекенда
+        // Этап 3: Сборка и запуск бекенда
         stage('Deploy Backend') {
             steps {
                 script {
@@ -43,7 +53,7 @@ pipeline {
             }
         }
         
-        // Этап 3: Проверка работоспособности
+        // Этап 4: Проверка работоспособности
         stage('Health Check') {
             steps {
                 script {
