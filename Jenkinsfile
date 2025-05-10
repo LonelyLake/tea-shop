@@ -35,9 +35,9 @@ pipeline {
             steps {
                 sh '''
                     # Используем современный docker compose (без дефиса)
-                    docker-compose down || true
-                    docker-compose build
-                    docker-compose up -d
+                    docker compose down || true
+                    docker compose build
+                    docker compose up -d
 
                 '''
             }
