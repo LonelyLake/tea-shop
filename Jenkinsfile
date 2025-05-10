@@ -27,5 +27,6 @@ pipeline {
             steps {
                 sh 'cd backend && docker build -t tea-backend .'
             }
+        }
     }
 }
