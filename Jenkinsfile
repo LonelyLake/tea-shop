@@ -2,31 +2,48 @@ pipeline {
     agent any
     
     options {
-        cleanWs() // Clean workspace before starting
+        timeout(time: 30, unit: 'MINUTES')
+        retry(3) // Retry the entire pipeline up to 3 times
+    }
+    
+    environment {
+        // Set these in Jenkins credentials/store
+        GIT_CREDENTIALS = credentials('tea-token') 
     }
     
     stages {
-        stage('Clean Workspace') {
+        stage('Checkout') {
             steps {
-                cleanWs() // Additional cleanup for safety
+                script {
+                    try {
+                        checkout([
+                            $class: 'GitSCM',
+                            branches: [[name: '*/main']],
+                            extensions: [[
+                                $class: 'CleanBeforeCheckout'
+                            ]],
+                            userRemoteConfigs: [[
+                                url: 'https://github.com/LonelyLake/tea-shop',
+                                credentialsId: 'tea-token'
+                            ]]
+                        ])
+                    } catch (Exception e) {
+                        error("Failed to checkout repository: ${e.message}")
+                    }
+                }
             }
         }
         
-        stage('Checkout') {
-            steps {
-                checkout([
-                    $class: 'GitSCM',
-                    branches: [[name: '*/main']],
-                    extensions: [
-                        [$class: 'CleanBeforeCheckout'], // Clean before checkout
-                        [$class: 'CloneOption', shallow: true, depth: 1]
-                    ],
-                    userRemoteConfigs: [[
-                        url: 'https://github.com/LonelyLake/tea-shop',
-                        credentialsId: 'tea-token'
-                    ]]
-                ])
-            }
+        // Add other stages here
+    }
+    
+    post {
+        always {
+            echo 'Pipeline completed - cleanup can go here'
+        }
+        failure {
+            echo '❌ Pipeline failed!'
+            // Add notification steps here if needed
         }
     }
 }
