@@ -12,10 +12,7 @@ pipeline {
             }
         }
 
-        pipeline {
-            agent any
-            stages {
-            stage('Build and Deploy') {
+        stage('Build and Deploy') {
                 steps {
                     script {
                         // Используем полные пути к бинарникам
@@ -24,9 +21,7 @@ pipeline {
                         sh '/usr/bin/docker compose up -d'
                     }
                 }
-            }
         }
-    }
 
         stage('Build Backend') {
             steps {
