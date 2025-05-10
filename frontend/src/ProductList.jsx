@@ -8,7 +8,7 @@ export default function ProductList() {
 
   // Загрузка товаров с бекенда
   useEffect(() => {
-    axios.get("http://localhost:5000/api/teas")
+    axios.get("http://localhost:8000/api/teas")
       .then(response => setTeas(response.data))
       .catch(error => console.error("Ошибка загрузки:", error));
   }, []);
