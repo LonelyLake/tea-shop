@@ -6,6 +6,16 @@ pipeline {
     }
     
     stages {
+        // Этап 0: Установка безопасной директории для Git
+        stage('Setup Git Safe Directory') {
+            steps {
+                script {
+                    echo '=== Настройка безопасной директории для Git ==='
+                    sh 'git config --global --add safe.directory /var/jenkins_home/workspace/tea-shop'
+                }
+            }
+        }
+
         // Этап 1: Сборка фронтенда
         stage('Build Frontend') {
             steps {
