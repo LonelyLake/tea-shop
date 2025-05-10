@@ -35,6 +35,31 @@ pipeline {
         }
         
         // Add other stages here
+        // Этап 2: Сборка фронтенда
+        stage('Build Frontend') {
+            steps {
+                script {
+                    echo '=== СБОРКА FRONTEND ==='
+                    dir('frontend') {
+                        sh 'npm install'
+                        sh 'npm run build'
+                    }
+                }
+            }
+        }
+        
+        // Этап 3: Сборка бекенда
+        stage('Build Backend') {
+            steps {
+                script {
+                    echo '=== СОБОРКА БЕКЕНДА ==='
+                    dir('backend') {
+                        sh 'docker build -t tea-backend .'
+                    }
+                }
+            }
+        }
+        
     }
     
     post {
