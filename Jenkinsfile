@@ -3,6 +3,12 @@ pipeline {
     
     options {
         timeout(time: 30, unit: 'MINUTES')
+        retry(3) // Retry the entire pipeline up to 3 times
+    }
+    
+    environment {
+        // Set these in Jenkins credentials/store
+        GIT_CREDENTIALS = credentials('tea-token') 
     }
     
     stages {
@@ -13,46 +19,31 @@ pipeline {
                         checkout([
                             $class: 'GitSCM',
                             branches: [[name: '*/main']],
-                            extensions: [],
+                            extensions: [[
+                                $class: 'CleanBeforeCheckout'
+                            ]],
                             userRemoteConfigs: [[
-                                credentialsId: 'tea-token',
-                                url: 'https://github.com/LonelyLake/tea-shop'
+                                url: 'https://github.com/LonelyLake/tea-shop',
+                                credentialsId: 'tea-token'
                             ]]
                         ])
-                    } catch (e) {
-                        echo "Failed to checkout repository: ${e}"
-                        currentBuild.result = 'FAILURE'
-                        error("Checkout failed")
+                    } catch (Exception e) {
+                        error("Failed to checkout repository: ${e.message}")
                     }
                 }
             }
         }
         
-        // Add your other stages here
+        // Add other stages here
     }
     
     post {
         always {
-            script {
-                if (currentBuild.result == null || currentBuild.result == 'SUCCESS') {
-                    echo '=== CLEANUP AND LOGGING ==='
-                    cleanWs()
-                }
-            }
+            echo 'Pipeline completed - cleanup can go here'
         }
         failure {
-            echo '❌ Deployment error!'
-            // Only try to send Slack if the plugin is available
-            script {
-                if (env.SLACK_CHANNEL) {
-                    try {
-                        slackSend channel: env.SLACK_CHANNEL,
-                                message: "Build Failed: ${currentBuild.fullDisplayName}"
-                    } catch (e) {
-                        echo "Failed to send Slack notification: ${e}"
-                    }
-                }
-            }
+            echo '❌ Pipeline failed!'
+            // Add notification steps here if needed
         }
     }
 }
