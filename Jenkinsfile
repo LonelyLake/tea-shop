@@ -37,16 +37,20 @@ pipeline {
         // Add other stages here
         // Этап 2: Сборка фронтенда
         stage('Build Frontend') {
-            steps {
-                script {
-                    echo '=== СБОРКА FRONTEND ==='
-                    dir('frontend') {
-                        sh 'npm install'
-                        sh 'npm run build'
-                    }
+            agent {
+                docker {
+                    image 'node:16-alpine'
+                    args '-v /var/jenkins_home/workspace/tea-shop/frontend:/app'
+                    reuseNode true
                 }
             }
-        }
+            steps {
+                dir('/app') {
+                    sh 'npm install'
+                    sh 'npm run build'  # если нужно собрать проект
+                }
+            }
+        }       
         
         // Этап 3: Сборка бекенда
         stage('Build Backend') {
