@@ -8,7 +8,7 @@ pipeline {
     stages {
         stage('Clone repo') {
             steps {
-                git url: 'https://github.com/LonelyLake/tea-shop.git', credentialsId: 'github-token'
+                git branch: 'main', url: 'https://github.com/LonelyLake/tea-shop.git', credentialsId: 'github-token'
             }
         }
         stage('Build Backend') {
