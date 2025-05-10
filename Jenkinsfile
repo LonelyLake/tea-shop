@@ -12,16 +12,21 @@ pipeline {
             }
         }
 
-        stage('Build and Run') {
-            steps {
-                script {
-                    // Убедиться, что docker-compose файл на месте
-                    sh 'docker-compose down || true'
-                    sh 'docker-compose build'
-                    sh 'docker-compose up -d'
+        pipeline {
+            agent any
+            stages {
+            stage('Build and Deploy') {
+                steps {
+                    script {
+                        // Используем полные пути к бинарникам
+                        sh '/usr/bin/docker compose down || true'
+                        sh '/usr/bin/docker compose build'
+                        sh '/usr/bin/docker compose up -d'
+                    }
                 }
             }
         }
+    }
 
         stage('Build Backend') {
             steps {
