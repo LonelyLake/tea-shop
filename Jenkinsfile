@@ -3,76 +3,116 @@ pipeline {
     
     options {
         timeout(time: 30, unit: 'MINUTES')
-        retry(3) // Retry the entire pipeline up to 3 times
+        retry(2) // Повторять весь пайплайн максимум 2 раза
+        disableConcurrentBuilds() // Запретить параллельные сборки
     }
     
     environment {
-        // Set these in Jenkins credentials/store
-        GIT_CREDENTIALS = credentials('tea-token') 
+        // Используем credentials для Git
+        GIT_CREDENTIALS = credentials('tea-token')
+        // Настройки для Docker (если нужно)
+        DOCKER_BUILDKIT = "1"
     }
     
     stages {
         stage('Checkout') {
             steps {
-                script {
-                    try {
-                        checkout([
-                            $class: 'GitSCM',
-                            branches: [[name: '*/main']],
-                            extensions: [[
-                                $class: 'CleanBeforeCheckout'
-                            ]],
-                            userRemoteConfigs: [[
-                                url: 'https://github.com/LonelyLake/tea-shop',
-                                credentialsId: 'tea-token'
-                            ]]
-                        ])
-                    } catch (Exception e) {
-                        error("Failed to checkout repository: ${e.message}")
-                    }
-                }
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: '*/main']],
+                    extensions: [
+                        [$class: 'CleanBeforeCheckout'],
+                        [$class: 'CloneOption', 
+                         shallow: true, 
+                         depth: 1,
+                         noTags: true,
+                         timeout: 10]
+                    ],
+                    userRemoteConfigs: [[
+                        url: 'https://github.com/LonelyLake/tea-shop',
+                        credentialsId: 'tea-token'
+                    ]]
+                ])
             }
         }
         
-        // Add other stages here
-        // Этап 2: Сборка фронтенда
         stage('Build Frontend') {
             agent {
                 docker {
                     image 'node:16-alpine'
-                    args '-v /var/jenkins_home/workspace/tea-shop/frontend:/app'
+                    args '--network host -v /var/jenkins_home/workspace/tea-shop/frontend:/app'
                     reuseNode true
                 }
             }
             steps {
                 dir('/app') {
-                    sh 'npm install'
-                    sh 'npm run build'
+                    sh '''
+                        npm ci --no-audit
+                        npm run build
+                    '''
                 }
             }
-        }       
-        
-        // Этап 3: Сборка бекенда
-        stage('Build Backend') {
-            steps {
-                script {
-                    echo '=== СОБОРКА БЕКЕНДА ==='
-                    dir('backend') {
-                        sh 'docker build -t tea-backend .'
-                    }
+            post {
+                always {
+                    echo 'Frontend build completed'
                 }
             }
         }
         
+        stage('Build Backend') {
+            agent {
+                docker {
+                    image 'docker:dind'
+                    args '--privileged --network host -v /var/run/docker.sock:/var/run/docker.sock'
+                    reuseNode true
+                }
+            }
+            steps {
+                dir('backend') {
+                    sh '''
+                        docker build -t tea-backend:${BUILD_NUMBER} .
+                        docker tag tea-backend:${BUILD_NUMBER} tea-backend:latest
+                    '''
+                }
+            }
+            post {
+                always {
+                    echo 'Backend build completed'
+                }
+            }
+        }
+        
+        stage('Deploy') {
+            when {
+                branch 'main' // Разворачиваем только из ветки main
+            }
+            steps {
+                script {
+                    echo '=== DEPLOY TO PRODUCTION ==='
+                    // Здесь могут быть ваши команды деплоя
+                }
+            }
+        }
     }
     
     post {
         always {
-            echo 'Pipeline completed - cleanup can go here'
+            echo "Pipeline completed with status: ${currentBuild.currentResult}"
+            script {
+                // Очистка Docker образов
+                sh 'docker system prune -f || true'
+            }
+        }
+        success {
+            echo '✅ Pipeline succeeded!'
+            // Можно добавить уведомления в Slack/Email
         }
         failure {
             echo '❌ Pipeline failed!'
-            // Add notification steps here if needed
+            // Можно добавить уведомления об ошибке
+        }
+        unstable {
+            echo '⚠️ Pipeline unstable!'
         }
     }
 }
