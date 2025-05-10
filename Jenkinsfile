@@ -13,14 +13,17 @@ pipeline {
         }
 
         stage('Build and Deploy') {
-                steps {
-                    script {
-                        // Используем полные пути к бинарникам
-                        sh '/usr/bin/docker compose down || true'
-                        sh '/usr/bin/docker compose build'
-                        sh '/usr/bin/docker compose up -d'
-                    }
+            steps {
+                script {
+                    // Удаляем устаревший атрибут version из docker-compose.yml
+                    sh '''
+                        sed -i '/^version:/d' docker-compose.yml
+                        docker compose down || true
+                        docker compose build
+                        docker compose up -d
+                    '''
                 }
+            }
         }
 
         stage('Build Backend') {
