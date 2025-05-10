@@ -6,31 +6,51 @@ pipeline {
     }
 
     stages {
-        stage('Checkout') {
+        stage('Checkout Code') {
             steps {
-                checkout scm
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: '*/main']],
+                    extensions: [],
+                    userRemoteConfigs: [[
+                        url: 'https://github.com/LonelyLake/tea-shop.git',
+                        credentialsId: 'github-token'
+                    ]]
+                ])
+            }
+        }
+
+        stage('Prepare Environment') {
+            steps {
+                sh '''
+                    # Удаляем устаревший version из docker-compose.yml
+                    if [ -f docker-compose.yml ]; then
+                        sed -i '/^version:/d' docker-compose.yml
+                    fi
+                '''
             }
         }
 
         stage('Build and Deploy') {
             steps {
-                script {
-                    sh '''
-                        sed -i '/^version:/d' docker-compose.yml
-                        docker-compose down || true
-                        docker-compose build
-                        docker-compose up -d
-                    '''
-                }
+                sh '''
+                    # Используем современный docker compose (без дефиса)
+                    docker compose down || true
+                    docker compose build
+                    docker compose up -d --force-recreate
+                '''
             }
         }
+    }
 
-        stage('Build Backend') {
-            steps {
-                dir('backend') {
-                    sh 'docker build -t tea-backend .'
-                }
-            }
+    post {
+        failure {
+            echo 'Pipeline failed!'
+            // Можно добавить уведомления
+        }
+        success {
+            echo 'Pipeline succeeded!'
+            // Можно добавить уведомления
         }
     }
 }
